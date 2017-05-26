@@ -1,6 +1,6 @@
 Epiphyte ![Build](https://img.shields.io/travis/cuhsat/epiphyte.svg)
 ========
-Epiphyte protocol.
+The Epiphyte Protocol.
 
 Usage
 -----
