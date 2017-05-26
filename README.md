@@ -5,7 +5,7 @@ Epiphyte protocol reference implementation.
 Usage
 -----
 ```
-$ epiphyte.py [OPTION|THREAD] [MESSAGE...]
+$ epiphyte.py THREAD [MESSAGE ...]
 ```
 
 Tests

@@ -227,7 +227,7 @@ class Epiphyte(Thread):
 
 def main(script, thread="--help", *message):
     """
-    Usage: %s [OPTION|THREAD] [MESSAGE...]
+    Usage: %s OPTION|THREAD [MESSAGE ...]
 
     Options:
       -h, --help      Shows this text
