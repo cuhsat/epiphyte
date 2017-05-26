@@ -1,5 +1,5 @@
-MIT License
-
+#!/usr/bin/env python
+"""
 Copyright (c) 2017 Christian Uhsat <christian@uhsat.de>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,3 +19,39 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+"""
+import os
+import sys
+
+
+from epiphyte import Epiphyte
+
+
+try:
+    import pytest
+except ImportError:
+    sys.exit("Requires pytest (https://pytest.org)")
+
+
+class TestEpiphyte:
+    """
+    Epiphyte unit tests.
+    """
+    def test_fuzzy(self):
+        """
+        Fuzzy data tests.
+        """
+        thread, tests = os.urandom(16), [os.urandom(2 ** n) for n in range(5)]
+
+        epiphyte = Epiphyte(thread, b'[PYTEST]')
+        epiphyte.pull()
+
+        for test in tests:
+            epiphyte.push(test)
+
+        for test, data in zip(tests, epiphyte):
+            assert test == data
+
+
+if __name__ == "__main__":
+    sys.exit(pytest.main(list(sys.argv)))
