@@ -31,63 +31,101 @@ try:
     from requests import request
     from requests.exceptions import ConnectionError, Timeout
 except ImportError:
-    sys.exit("Requires Requests (https://github.com/kennethreitz/requests)")
+    sys.exit("Requires requests module")
 
 
 try:
     from Crypto import Random
     from Crypto.Cipher import AES
-    from Crypto.Hash import HMAC, RIPEMD, SHA256
-    from Crypto.Util.py3compat import bchr, bord
+    from Crypto.Protocol.KDF import PBKDF2
 except ImportError:
-    sys.exit("Requires PyCrypto (https://github.com/dlitz/pycrypto)")
+    sys.exit("Requires pycrypto module")
 
 
-__all__, __version__ = ["Epiphyte"], "0.3.0"
+__all__, __version__ = ["Epiphyte"], "0.4.0"
 
 
-def encode(data): # Compatibility hack
-    return data if sys.version_info < (3,) else data.encode()
+class String(object):
+    """
+    String encodings.
+    """
+    @staticmethod
+    def decode(data):
+        """
+        Returns the UTF-8 decoded data.
+        """
+        return data if sys.version_info < (3,) else data.decode()
 
-def decode(data): # Compatibility hack
-    return data if sys.version_info < (3,) else data.decode()
+    @staticmethod
+    def encode(data):
+        """
+        Returns the UTF-8 encoded data.
+        """
+        return data if sys.version_info < (3,) else data.encode()
 
-def encode16(data): # Utility shortcut
-    return binascii.hexlify(data).decode()
+    @staticmethod
+    def decode16(data):
+        """
+        Returns the hexadecimal decoded data.
+        """
+        return binascii.unhexlify(data.encode())
 
-def encode64(data): # Utility shortcut
-    return base64.urlsafe_b64encode(data).decode()
+    @staticmethod
+    def encode16(data):
+        """
+        Returns the hexadecimal encoded data.
+        """
+        return binascii.hexlify(data).decode()
 
-def decode64(data): # Utility shortcut
-    return base64.urlsafe_b64decode(data.encode())
+    @staticmethod
+    def decode64(data):
+        """
+        Returns the URL safe Base64 decoded data.
+        """
+        return base64.urlsafe_b64decode(data.encode())
+
+    @staticmethod
+    def encode64(data):
+        """
+        Returns the URL safe Base64 encoded data.
+        """
+        return base64.urlsafe_b64encode(data).decode()
 
 
 class TinyUrl(object):
-    GET_URL = "http://tinyurl.com/"
-    SET_URL = "http://tinyurl.com/create.php"
+    """
+    TinyURL key/value storage using the anchor fragment.
+    """
+    def __init__(self):
+        """
+        Initializes the internal structures.
+        """
+        self.GET_URL = "https://tinyurl.com/"
+        self.SET_URL = "https://tinyurl.com/create.php"
 
     def __delitem__(self, key):
+        """
+        Not implemented (and never will).
+        """
         raise NotImplementedError
 
     def __getitem__(self, key):
-        return decode64(self.get(encode16(key)))
+        """
+        Gets a Base64 decoded value.
+        """
+        return String.decode64(self.get(String.encode16(key)))
 
     def __setitem__(self, key, value):
-        self.set(encode16(key), encode64(value))
-
-    def __get(self, key):
-        return request("GET", TinyUrl.GET_URL + key, allow_redirects=False)
-
-    def __set(self, key, value):
-        return request("POST", TinyUrl.SET_URL, params={
-            # "source": "indexpage",
-            # "submit": "Make+TinyURL!",
-            "url": "http://127.0.0.1#" + value,
-            "alias": key
-        })
+        """
+        Sets a Base64 encoded value.
+        """
+        self.set(String.encode16(key), String.encode64(value))
 
     def get(self, key):
-        response = self.__get(key)
+        """
+        Gets a value by the key.
+        """
+        response = request("GET", self.GET_URL + key, allow_redirects=False)
         location = response.headers.get("Location", "")
 
         if response.status_code == 404:
@@ -102,7 +140,13 @@ class TinyUrl(object):
         return location.rsplit("#", 1)[-1]
 
     def set(self, key, value):
-        response = self.__set(key, value)
+        """
+        Sets a value to the key.
+        """
+        response = request("POST", self.SET_URL, params={
+            "url": "http://127.0.0.1#" + value,
+            "alias": key
+        })
 
         if response.status_code != 200:
             raise Exception("Invalid status")
@@ -112,122 +156,151 @@ class TinyUrl(object):
 
 
 class Chunk(object):
+    """
+    Data chunk.
+    """
     def __init__(self, link=b"", data=b""):
+        """
+        Initializes the internal structures.
+        """
         self.link = link
         self.data = data
 
-    def __link(self):
-        return Random.get_random_bytes(20)
-
-    def __key(self, key):
-        return (key[:16], key[16:])
-
-    def __cut(self, data):
-        return data[:-bord(data[-1])]
-
-    def __pad(self, data):
-        size = AES.block_size - (len(data) % AES.block_size)
-        return data + (bchr(size) * size)
-
-    def __decrypt(self, key, data):
-        key, iv = self.__key(key)
-        return AES.new(key, AES.MODE_CBC, iv).decrypt(data)
-
-    def __encrypt(self, key, data):
-        key, iv = self.__key(key)
-        return AES.new(key, AES.MODE_CBC, iv).encrypt(data)
-
     def decrypt(self, key, frame):
+        """
+        Decrypts the chunk.
+        """
         self.frame = frame
 
-        frame = self.__decrypt(key, self.frame)
-        frame = self.__cut(frame)
+        frame = AES.new(key[:16], AES.MODE_CFB, key[16:]).decrypt(frame)
 
         self.link = frame[:20]
         self.data = frame[20:]
 
     def encrypt(self, key, data):
-        self.link = self.__link()
+        """
+        Encrypts the chunk.
+        """
+        self.link = Random.get_random_bytes(20)
         self.data = data
 
-        frame = self.__pad(self.link + self.data)
-        frame = self.__encrypt(key, frame)
+        frame = self.link + self.data
+        frame = AES.new(key[:16], AES.MODE_CFB, key[16:]).encrypt(frame)
 
         self.frame = frame
 
 
 class Thread(list):
+    """
+    Thread of chunks.
+    """
     def __init__(self, thread, salt):
+        """
+        Initializes the internal structures.
+        """
         self.thread = thread
-        self.append(Chunk(self.__init(salt)))
+        self.append(Chunk(self.hash(salt, 20)))
 
     def __iter__(self):
+        """
+        Returns an iterator for all valid chunks.
+        """
         return iter([chunk.data for chunk in self[1:]])
 
     def __repr__(self):
-        return decode(self.thread)
-
-    def __init(self, salt):
-        return HMAC.new(salt, self.thread, RIPEMD).digest()
-
-    def __hash(self, data):
-        return HMAC.new(data, self.thread, SHA256).digest()
+        """
+        Returns the UTF-8 decoded thread.
+        """
+        return String.decode(self.thread)
 
     def last(self):
+        """
+        Returns the last thread chunk.
+        """
         return self[-1]
 
-    def decrypt(self, entry):
+    def hash(self, data, length):
+        """
+        Returns the derived hash.
+        """
+        return PBKDF2(data, self.thread, length)
+
+    def add(self, data):
+        """
+        Adds a decrypted chunk.
+        """
         last = self.last()
 
         chunk = Chunk()
-        chunk.decrypt(self.__hash(last.data), entry)
+        chunk.decrypt(self.hash(last.data, 32), data)
 
         self.append(chunk)
 
-    def encrypt(self, entry):
+    def new(self, data):
+        """
+        Adds an encrypted chunk and returns the key/value pair.
+        """
         last = self.last()
 
         chunk = Chunk()
-        chunk.encrypt(self.__hash(last.data), entry)
+        chunk.encrypt(self.hash(last.data, 32), data)
 
         self.append(chunk)
 
         return (last.link, chunk.frame)
 
 
-class Epiphyte(Thread):
-    def __init__(self, thread, salt=b"epiphyte", provider=TinyUrl()):
+class Epiphyte(object):
+    """
+    The epiphyte protocol.
+    """
+    def __init__(self, thread, salt=b"epiphyte", storage=TinyUrl()):
+        """
+        Initializes the protocol.
+        """
         self.thread = Thread(thread, salt)
-        self.provider = provider
-        self.pull()
+        self.storage = storage
+        self.follow()
 
     def __iter__(self):
+        """
+        Returns the thread iterator.
+        """
         return iter(self.thread)
 
     def __repr__(self):
+        """
+        Returns the thread representation.
+        """
         return repr(self.thread)
 
-    def pull(self):
+    def follow(self):
+        """
+        Follows all new chunks on the thread.
+        """
         while True:
             chunk = self.thread.last()
-            frame = self.provider[chunk.link]
+            frame = self.storage[chunk.link]
 
             if not frame:
                 break
 
-            self.thread.decrypt(frame)
+            self.thread.add(frame)
 
-    def push(self, message):
-        self.pull()
+    def append(self, message):
+        """
+        Appends a new chunk to the thread.
+        """
+        self.follow()
 
-        link, frame = self.thread.encrypt(message)
+        link, frame = self.thread.new(message)
 
-        self.provider[link] = frame
+        self.storage[link] = frame
 
 
 def main(script, thread="--help", *message):
     """
-    Usage: %s OPTION|THREAD [MESSAGE ...]
+    Usage: %s THREAD [MESSAGE ...]
 
     Options:
       -h, --help      Shows this text
@@ -249,13 +322,13 @@ def main(script, thread="--help", *message):
             print("Epiphyte " + __version__)
 
         else:
-            epiphyte = Epiphyte(encode(thread))
+            epiphyte = Epiphyte(String.encode(thread))
 
             if message:
-                epiphyte.push(encode(" ".join(message)))
+                epiphyte.append(String.encode(" ".join(message)))
 
             for message in epiphyte:
-                print(decode(message))
+                print(String.decode(message))
 
     except KeyboardInterrupt:
         return "Abort"
