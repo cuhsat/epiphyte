@@ -78,7 +78,7 @@ Decryption of the received frame is done via the following steps:
 
 Security Considerations
 -----------------------
-The thread identifier MUST BE kept secret.
+The thread identifier *MUST BE* kept secret.
 
 License
 =======
