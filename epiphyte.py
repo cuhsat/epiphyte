@@ -23,7 +23,6 @@ SOFTWARE.
 import base64
 import binascii
 import os
-import re
 import sys
 
 
@@ -42,7 +41,7 @@ except ImportError:
     sys.exit("Requires pycrypto module")
 
 
-__all__, __version__ = ["Epiphyte"], "0.4.0"
+__all__, __version__ = ["Epiphyte"], "0.4.1"
 
 
 class String(object):
@@ -207,12 +206,6 @@ class Thread(list):
         """
         return iter([chunk.data for chunk in self[1:]])
 
-    def __repr__(self):
-        """
-        Returns the UTF-8 decoded thread.
-        """
-        return String.decode(self.thread)
-
     def last(self):
         """
         Returns the last thread chunk.
@@ -262,12 +255,6 @@ class Epiphyte(object):
         self.storage = storage
         self.follow()
 
-    def __iter__(self):
-        """
-        Returns the thread iterator.
-        """
-        return iter(self.thread)
-
     def __repr__(self):
         """
         Returns the thread representation.
@@ -301,19 +288,10 @@ class Epiphyte(object):
 def main(script, thread="--help", *message):
     """
     Usage: %s THREAD [MESSAGE ...]
-
-    Options:
-      -h, --help      Shows this text
-      -l, --license   Shows the license
-      -v, --version   Shows the version
-
-    Report bugs to <christian@uhsat.de>
     """
     try:
-        script = os.path.basename(script)
-
         if thread in ("/?", "-h", "--help"):
-            print(re.sub("(?m)^ {4}", "", main.__doc__ % script).strip())
+            print(main.__doc__.strip() % os.path.basename(script))
 
         elif thread in ("-l", "--license"):
             print(__doc__.strip())
