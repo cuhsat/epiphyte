@@ -3,7 +3,7 @@ Epiphyte ![Build](https://img.shields.io/travis/cuhsat/epiphyte.svg)
 The Epiphyte Protocol.
 
 (Ab)using [TinyURL.com](https://tinyurl.com) as a key/value storage for
-encrypted, hidden threads using the anchor fragment.
+encrypted, hidden threads.
 
 Usage
 -----
@@ -44,7 +44,7 @@ host: tinyurl.com
 
 Structure
 ---------
-A `frame` is structured according to the following format:
+A `frame` is build according to the following format:
 ```
 LINK (20 bytes) | DATA (n bytes)
 ```
@@ -78,7 +78,7 @@ Decryption of the received frame is done via the following steps:
 
 Security Considerations
 -----------------------
-The thread identifier *MUST BE* kept secret.
+The thread identifier MUST BE kept secret.
 
 License
 =======
