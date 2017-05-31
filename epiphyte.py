@@ -41,7 +41,7 @@ except ImportError:
     sys.exit("Requires pycrypto module")
 
 
-__all__, __version__ = ["Epiphyte"], "0.4.1"
+__all__, __version__ = ["Epiphyte"], "0.4.2"
 
 
 class String(object):
@@ -255,11 +255,11 @@ class Epiphyte(object):
         self.storage = storage
         self.follow()
 
-    def __repr__(self):
+    def __iter__(self):
         """
-        Returns the thread representation.
+        Returns the thread iterator.
         """
-        return repr(self.thread)
+        return iter(self.thread)
 
     def follow(self):
         """
