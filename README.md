@@ -3,7 +3,7 @@ Epiphyte ![Build](https://img.shields.io/travis/cuhsat/epiphyte.svg)
 The Epiphyte Protocol.
 
 (Ab)using [TinyURL.com](https://tinyurl.com) as a key/value storage for
-encrypted, hidden threads.
+hidden and encrypted message threads.
 
 Usage
 -----
@@ -25,60 +25,64 @@ for message in epiphyte:
 
 Protocol
 ========
-This implementation uses TinyURL.com as a key/value storage. Where the `link`
-bytes are encoded in hexadecimal and the `frame` bytes are encoded in URL safe
-Base64. The encoded `link` is then used as alias to GET/POST a local dummy URL
-with the encoded `frame` as the anchor fragment (`http://127.0.0.1#<frame>`).
 
-**Request**
+TinyURL
+-------
+This implementation uses TinyURL.com as a key/value storage. Where the `key`
+bytes are encoded in hexadecimal and the `value` bytes are encoded in URL safe
+Base64. The encoded `key` is then used as alias to POST/GET a local dummy URL
+with the encoded `value` as the anchor fragment (`http://127.0.0.1/#<value>`).
+
+POST request:
 ```
-GET /<link> HTTP/1.1
+POST /create.php?url=http%3A%2F%2F127.0.0.1%2F%23<value>&alias=<key> HTTP/1.1
 host: tinyurl.com
 ```
 
-**Request**
+GET request:
 ```
-POST /create.php?url=http%3A%2F%2F127.0.0.1%23<frame>&alias=<link> HTTP/1.1
+GET /<key> HTTP/1.1
 host: tinyurl.com
 ```
 
-Structure
+Splitting
 ---------
-A `frame` is build according to the following format:
+All values larger than 4096 bytes will be splitted into different frames. A
+`frame` is build according to the following format:
 ```
-LINK (20 bytes) | DATA (n bytes)
+[ LINK (20 bytes) | DATA (1 to 4096 bytes) ]
 ```
 
-A `link` points to the address of next `frame`. If under this address no data
-can be found, the end of thread has been reached. For the first link, the
-first derived 20 bytes from the threads identifier will be used.
+The `link` is the key of the next frame. If no value is returned for this
+key, the current end of the thread has been reached. The next frame must be
+stored under this key. For the first key, the first derived 20 bytes from the
+threads hashed name will be used.
 
-Derivation
-----------
-All key derivation is done via PKCS#5 v2.0 PBKDF2 (SHA1, 1000 rounds) using
-the fix salt `epiphyte`.
+Key Derivation
+--------------
+All encryption keys are 32 bytes long and are derived via PKCS#5 v2.0 PBKDF2
+(SHA1, 1000 rounds) using the fix salt `epiphyte`. The first 16 bytes of the
+hash will be used as key and the last 16 bytes will be used as initialization
+vector.
 
 Encryption
 ----------
-Encryption of a new frame is done via the following steps:
+Encryption of a new frame is done in the following steps:
 
-1. Generate cyptographically secure 20 random bytes as link.
-2. Derive the keys bytes with PBKDF2 from the last plain text data.
-3. Encrypt the combined link and data with AES-256 in CFB mode
-   using the first 16 bytes of the hash as key and the last 16
-   bytes as IV.
+1. Generate secure 20 random bytes for the new link.
+2. Derive the key with PBKDF2 from the last plain text data.
+3. Encrypt the combined link and data with AES-256 in CFB mode using the key.
 
 Decryption
 ----------
-Decryption of the received frame is done via the following steps:
+Decryption of the received frame is done in the following steps:
 
-1. Derive the keys bytes with PBKDF2 from the last plain text data.
-2. Decrypt the frame with AES-256 CFB in mode using the 16 bytes
-   of the hash as key and the last 16 bytes as IV.
+1. Derive the key with PBKDF2 from the last plain text data.
+2. Decrypt the frame with AES-256 in CFB mode using the key.
 
 Security Considerations
 -----------------------
-The thread identifier MUST BE kept secret.
+The thread name MUST BE kept secret.
 
 License
 =======

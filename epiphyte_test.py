@@ -30,7 +30,7 @@ from epiphyte import Epiphyte
 try:
     import pytest
 except ImportError:
-    sys.exit("Requires pytest module")
+    sys.exit("Requires pytest")
 
 
 class TestEpiphyte:
@@ -39,20 +39,20 @@ class TestEpiphyte:
     """
     def test_fuzzy(self):
         """
-        Fuzzy data tests.
+        Fuzzy tests.
         """
         thread = os.urandom(32)
-        chunks = [os.urandom(2 ** n) for n in range(8)]
+        tests = [os.urandom(4096) for n in range(10)]
 
-        epiphyte = Epiphyte(thread, b'[PYTEST]')
+        epiphyte = Epiphyte(thread, b'epiphyte_test')
 
-        for chunk in chunks:
-            epiphyte.append(chunk)
+        for test in tests:
+            epiphyte.append(test)
 
-        epiphyte = Epiphyte(thread, b'[PYTEST]')
+        epiphyte = Epiphyte(thread, b'epiphyte_test')
 
-        for chunk, data in zip(chunks, epiphyte):
-            assert chunk == data
+        for test, data in zip(tests, epiphyte):
+            assert test == data
 
 
 if __name__ == "__main__":
