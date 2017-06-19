@@ -35,13 +35,13 @@ except ImportError:
 
 try:
     from Crypto import Random
-    from Crypto.Cipher import AES
-    from Crypto.Protocol.KDF import PBKDF2
+    from Crypto.Cipher import ChaCha20
+    from Crypto.Protocol.KDF import scrypt
 except ImportError:
-    sys.exit("Requires PyCrypto")
+    sys.exit("Requires PyCryptodome")
 
 
-__all__, __version__ = ["Epiphyte", "String", "TinyUrl"], "0.5.0"
+__all__, __version__ = ["Epiphyte", "Storage", "String", "TinyUrl"], "0.6.0"
 
 
 class String(object):
@@ -91,16 +91,15 @@ class String(object):
         return data if sys.version_info < (3,) else data.decode()
 
 
-class TinyUrl(object):
+class Storage(object):
     """
-    TinyURL.com key/value storage.
+    Abstract key/value storage.
     """
     def __init__(self):
         """
-        Initializes the storage.
+        Not implemented (and never will).
         """
-        self.GET = "https://tinyurl.com/"
-        self.SET = "https://tinyurl.com/create.php"
+        raise NotImplementedError
 
     def __delitem__(self, key):
         """
@@ -124,7 +123,7 @@ class TinyUrl(object):
         """
         Gets a value by the key.
         """
-        response = request("GET", self.GET + key, allow_redirects=False)
+        response = request("GET", self.get_url + key, allow_redirects=False)
 
         location = response.headers.get("Location", "")
 
@@ -143,10 +142,7 @@ class TinyUrl(object):
         """
         Sets a value to the key.
         """
-        response = request("POST", self.SET, params={
-            # Uncomment if requests are denied
-            # "source": "indexpage",
-            # "submit": "Make+TinyURL!",
+        response = request("POST", self.set_url, params={
             "url": "http://127.0.0.1/#" + value,
             "alias": key
         })
@@ -154,8 +150,20 @@ class TinyUrl(object):
         if response.status_code != 200:
             raise Exception("Invalid status")
 
-        if "not available" in response.text:
+        if "not available" in response.text.lower():
             raise Exception("Already exists")
+
+
+class TinyUrl(Storage):
+    """
+    TinyURL.com storage.
+    """
+    def __init__(self):
+        """
+        Initializes the storage.
+        """
+        self.get_url = "https://tinyurl.com/"
+        self.set_url = "https://tinyurl.com/create.php"
 
 
 class Chunk(object):
@@ -175,7 +183,7 @@ class Chunk(object):
         """
         self.frame = frame
 
-        frame = AES.new(key[:16], AES.MODE_CFB, key[16:]).decrypt(frame)
+        frame = ChaCha20.new(key=key[:32], nonce=key[32:]).decrypt(frame)
 
         self.link = frame[:20]
         self.data = frame[20:]
@@ -188,7 +196,7 @@ class Chunk(object):
         self.data = data
 
         frame = self.link + self.data
-        frame = AES.new(key[:16], AES.MODE_CFB, key[16:]).encrypt(frame)
+        frame = ChaCha20.new(key=key[:32], nonce=key[32:]).encrypt(frame)
 
         self.frame = frame
 
@@ -220,7 +228,7 @@ class Thread(list):
         """
         Returns the derived hash.
         """
-        return PBKDF2(data, self.thread, length)
+        return scrypt(data, self.thread, length, 16384, 8, 1, 1)
 
     def decrypt(self, data):
         """
@@ -229,7 +237,7 @@ class Thread(list):
         last = self.last()
 
         chunk = Chunk()
-        chunk.decrypt(self.hash(last.data, 32), data)
+        chunk.decrypt(self.hash(last.data, 40), data)
 
         self.append(chunk)
 
@@ -240,7 +248,7 @@ class Thread(list):
         last = self.last()
 
         chunk = Chunk()
-        chunk.encrypt(self.hash(last.data, 32), data)
+        chunk.encrypt(self.hash(last.data, 40), data)
 
         self.append(chunk)
 

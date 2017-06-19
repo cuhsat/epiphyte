@@ -60,25 +60,24 @@ threads hashed name will be used.
 
 Key Derivation
 --------------
-All encryption keys are 32 bytes long and are derived via PKCS#5 v2.0 PBKDF2
-(SHA1, 1000 rounds) using the fix salt `epiphyte`. The first 16 bytes of the
-hash will be used as key and the last 16 bytes will be used as initialization
-vector.
+All keys are 40 bytes long and are derived via scrypt (N=16384, p=1) using the
+fix salt `epiphyte`. The first 32 bytes of the hash will be used as key and
+the last 8 bytes will be used as nonce.
 
 Encryption
 ----------
 Encryption of a new frame is done in the following steps:
 
 1. Generate secure 20 random bytes for the new link.
-2. Derive the key with PBKDF2 from the last plain text data.
-3. Encrypt the combined link and data with AES-256 in CFB mode using the key.
+2. Derive the key and nonce with scrypt from the last plain text data.
+3. Encrypt the combined link and data with ChaCha20 using the key and nonce.
 
 Decryption
 ----------
 Decryption of the received frame is done in the following steps:
 
-1. Derive the key with PBKDF2 from the last plain text data.
-2. Decrypt the frame with AES-256 in CFB mode using the key.
+1. Derive the key and nocne with scrypt from the last plain text data.
+2. Decrypt the frame with ChaCha20 using the key and nonce.
 
 Security Considerations
 -----------------------
