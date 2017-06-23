@@ -41,7 +41,7 @@ except ImportError:
     sys.exit("Requires PyCryptodome")
 
 
-__all__, __version__ = ["Epiphyte", "String", "TinyUrl" "Uss"], "0.6.1"
+__all__, __version__ = ["Epiphyte", "Shorty", "String", "TinyUrl"], "0.6.2"
 
 
 class String(object):
@@ -154,6 +154,18 @@ class Storage(object):
             raise Exception("Already exists")
 
 
+class Shorty(Storage):
+    """
+    Shorty custom storage.
+    """
+    def __init__(self, server):
+        """
+        Initializes the storage.
+        """
+        self.get_url = server + "/"
+        self.set_url = server + "/create"
+
+
 class TinyUrl(Storage):
     """
     TinyURL.com storage.
@@ -164,18 +176,6 @@ class TinyUrl(Storage):
         """
         self.get_url = "https://tinyurl.com/"
         self.set_url = "https://tinyurl.com/create.php"
-
-
-class Uss(Storage):
-    """
-    USS custom storage.
-    """
-    def __init__(self, server):
-        """
-        Initializes the storage.
-        """
-        self.get_url = server + "/"
-        self.set_url = server + "/create"
 
 
 class Chunk(object):
