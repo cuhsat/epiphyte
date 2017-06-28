@@ -41,7 +41,7 @@ except ImportError:
     sys.exit("Requires PyCryptodome")
 
 
-__all__, __version__ = ["Epiphyte", "Shorty", "String", "TinyUrl"], "0.6.2"
+__all__, __version__ = ["Epiphyte", "String", "TinyUrl"], "0.6.3"
 
 
 class String(object):
@@ -91,15 +91,16 @@ class String(object):
         return data if sys.version_info < (3,) else data.decode()
 
 
-class Storage(object):
+class TinyUrl(object):
     """
-    Abstract key/value storage.
+    TinyURL.com key/value storage.
     """
-    def __init__(self):
+    def __init__(self, base="https://tinyurl.com"):
         """
-        Not implemented (and never will).
+        Initializes the storage.
         """
-        raise NotImplementedError
+        self.get_url = base + "/"
+        self.set_url = base + "/create.php"
 
     def __delitem__(self, key):
         """
@@ -152,30 +153,6 @@ class Storage(object):
 
         if "not available" in response.text.lower():
             raise Exception("Already exists")
-
-
-class Shorty(Storage):
-    """
-    Shorty custom storage.
-    """
-    def __init__(self, server):
-        """
-        Initializes the storage.
-        """
-        self.get_url = server + "/"
-        self.set_url = server + "/create"
-
-
-class TinyUrl(Storage):
-    """
-    TinyURL.com storage.
-    """
-    def __init__(self):
-        """
-        Initializes the storage.
-        """
-        self.get_url = "https://tinyurl.com/"
-        self.set_url = "https://tinyurl.com/create.php"
 
 
 class Chunk(object):
