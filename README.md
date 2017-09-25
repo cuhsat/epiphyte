@@ -16,10 +16,10 @@ Import
 ```
 from epiphyte import Epiphyte
 
-epiphyte = Epiphyte(b"thread")
-epiphyte.append(b"message")
+thread = Epiphyte(b"test")
+thread.append(b"Hello World!")
 
-for message in epiphyte:
+for message in thread:
     print(message)
 ```
 
@@ -76,7 +76,7 @@ Decryption
 ----------
 Decryption of the received frame is done in the following steps:
 
-1. Derive the key and nocne with scrypt from the last plain text data.
+1. Derive the key and nonce with scrypt from the last plain text data.
 2. Decrypt the frame with ChaCha20 using the key and nonce.
 
 Security Considerations
