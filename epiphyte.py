@@ -41,7 +41,7 @@ except ImportError:
     sys.exit("Requires PyCryptodome")
 
 
-__all__, __version__ = ["Epiphyte", "String", "TinyUrl"], "0.6.4"
+__all__, __version__ = ["Epiphyte", "String", "TinyUrl"], "0.6.5"
 
 
 class String(object):
